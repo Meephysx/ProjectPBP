@@ -116,4 +116,26 @@ exports.getUsers = async (req, res) => {
   }
 };
 
+exports.getUserById = async (req, res) => {
+  const { id } = req.params;
+
+  try {    
+    const query = "SELECT * FROM Users WHERE id = ?";
+    db.query(query, [id], (err, results) => {
+      if (err) {
+        console.error("Error fetching user:", err.message);
+        return res.status(500).json({ error: "Failed to fetch user", details: err.message });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      return res.status(200).json({ user: results[0] });
+    });
+  } catch (err) {
+    console.error("Unexpected error:", err.message);
+    return res.status(500).json({ error: "An error occurred", details: err.message });
+  } 
+};
 

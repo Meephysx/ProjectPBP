@@ -1,5 +1,5 @@
 const express = require("express");
-const {createPin, getPinsByBoardId, deletePin, updatePin, searchPins, sharePins, reportPin }  = require("../controllers/pinsControllers")
+const {createPin, getPinsByBoardId, deletePin, updatePin, searchPins, sharePins}  = require("../controllers/pinsControllers")
 const router = express.Router();
 
 router.post("/create-pins", createPin);
@@ -13,10 +13,6 @@ router.put("/update-pins/:pin_id", updatePin);
 router.get("/search-pins/:keyword", getPinsByBoardId);
 
 router.get("/share-pins/:id", searchPins);
-
-router.post("/report-pins/:id", reportPin);
-
-router.get
 
 
 

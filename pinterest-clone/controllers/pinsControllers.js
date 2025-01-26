@@ -239,64 +239,7 @@ exports.sharePin = async (req, res) => {
     }
 };
 
-exports.reportPin = async (req, res) => {
-    const { id } = req.params; // ID Pin yang dilaporkan (dari URL parameter)
-    const { user_id, reason } = req.body; // Data pelapor dan alasan laporan
-  
-    // Validasi input
-    if (!user_id || !reason) {
-      return res.status(400).json({ error: "user_id and reason are required" });
-    }
-  
-    try {
-      // Cek apakah Pin dengan ID tersebut ada di database
-      const queryCheck = "SELECT * FROM Pins WHERE id = ?";
-      db.query(queryCheck, [id], (err, results) => {
-        if (err) {
-          console.error("Error checking pin:", err.message);
-          return res.status(500).json({
-            error: "Failed to check pin",
-            details: err.message,
-          });
-        }
-  
-        // Jika pin tidak ditemukan
-        if (results.length === 0) {
-          return res.status(404).json({ error: "Pin not found" });
-        }
-  
-        // Masukkan laporan ke dalam tabel PinReports
-        const queryInsert =
-          "INSERT INTO PinReports (pin_id, user_id, reason) VALUES (?, ?, ?)";
-        db.query(queryInsert, [id, user_id, reason], (err, result) => {
-          if (err) {
-            console.error("Error reporting pin:", err.message);
-            return res.status(500).json({
-              error: "Failed to report pin",
-              details: err.message,
-            });
-          }
-  
-          // Respons sukses
-          return res.status(200).json({
-            message: "Pin reported successfully",
-            reportDetails: {
-              report_id: result.insertId,
-              pin_id: id,
-              user_id,
-              reason,
-            },
-          });
-        });
-      });
-    } catch (err) {
-      console.error("Unexpected error:", err.message);
-      return res.status(500).json({
-        error: "An unexpected error occurred",
-        details: err.message,
-      });
-    }
-};
+
   
 
 

@@ -10,7 +10,7 @@ app.use('/pins', require('./routes/pinsRoutes'));
 app.use('/boards', require('./routes/boardsRoutes'));
 app.use('/comments', require('./routes/commentsRoutes'));
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}.`);
