@@ -168,10 +168,45 @@ CREATE TABLE Comments (
 2. **Integritas**: Menjaga hubungan antar tabel dengan Foreign Key untuk mencegah data yang tidak valid.
 3. **Skalabilitas**: Memastikan struktur database dapat menangani peningkatan data seiring pertumbuhan aplikasi.
 
-Apakah ada revisi tambahan yang ingin Anda masukkan? Atau kita lanjutkan ke bagian berikutnya?
-
 ---
 
+### Sturktur Proyek 
+
+```
+pinterest-clone/
+├── config/
+│   └── db.js                # Konfigurasi database untuk menghubungkan aplikasi ke database.
+├── controllers/
+│   ├── boardsController.js  # Mengelola board pada tampilan pins.
+│   ├── pinsController.js    # Mengelola operasi CRUD untuk Pins.
+│   ├── commentsController.js# Mengatur fungsi untuk komentar pada Pins.
+│   └── usersController.js   # Mengelola data pengguna seperti getUsers, searchUsers, dll.
+├── middlewares/
+│   ├── authenticateToken.js # Middleware untuk memvalidasi token JWT.
+│   └── errorHandler.js      # Middleware untuk penanganan error secara global.
+├── node_modules/            # Berisi semua dependensi proyek yang diinstal melalui npm.
+├── routes/
+│   ├── boardsRoutes.js      # Routing untuk endpoint terkait tampilan.
+│   ├── pinsRoutes.js        # Routing untuk endpoint terkait Pins (create, get, update, delete).
+│   ├── commentsRoutes.js    # Routing untuk endpoint terkait komentar pada Pins.
+│   └── usersRoutes.js       # Routing untuk endpoint terkait data pengguna.
+├── .env                     # File konfigurasi environment untuk menyimpan variabel sensitif.
+├── .gitignore               # File untuk menentukan direktori atau file yang diabaikan oleh Git.
+├── package.json             # File konfigurasi proyek Node.js, mendeskripsikan dependensi dan skrip.
+├── package-lock.json        # Versi terkunci dari dependensi proyek.
+└── server.js                # Entry point utama aplikasi, tempat server Node.js dijalankan.
+```
+
+**Penjelasan Direktori:**
+- **config/**: Menyimpan file konfigurasi, misalnya untuk database.
+- **controllers/**: Mengelola logika utama aplikasi, seperti operasi CRUD dan autentikasi.
+- **middlewares/**: Berisi middleware untuk validasi dan penanganan error.
+- **node_modules/**: Direktori dependensi Node.js.
+- **routes/**: Mendefinisikan endpoint aplikasi yang menghubungkan ke controller terkait.
+- **.env**: Berisi variabel environment seperti koneksi database, secret key JWT, dll.
+
+
+---
 ### Endpoint API
 
 #### **1. User (Autentikasi)**
@@ -383,6 +418,584 @@ Apakah ada revisi tambahan yang ingin Anda masukkan? Atau kita lanjutkan ke bagi
 - ![Screenshot 2025-01-26 210957](https://github.com/user-attachments/assets/c3e70950-b5d3-4495-ac6c-3dae142bf6d4)
 
 
+---
+
+### Kode yang telah dibuat
+
+---
+**boardsControllers**
+
+### `exports.createBoard`
+
+```javascript
+exports.createBoard = async (req, res) => {
+    const { user_id, name, description } = req.body;
+
+    // Validasi input
+    if (!user_id || !name) {
+        return res.status(400).json({
+            error: "Missing required fields",
+            message: "user_id and name are required"
+        });
+    }
+
+    try {
+        const query = `
+        INSERT INTO Boards (user_id, name, description)
+        VALUES (?, ?, ?)
+        `;
+        const values = [user_id, name, description || null];
+
+        db.query(query, values, (err, result) => {
+            if (err) {
+                console.error("Error inserting board:", err.message);
+                return res.status(500).json({
+                    error: "Failed to create board",
+                    details: err.message,
+                });
+            }
+
+            return res.status(201).json({
+                message: "Board created successfully",
+                board: {
+                    id: result.insertId,
+                    user_id,
+                    name,
+                    description: description || null,
+                    created_at: new Date().toISOString(),
+                },
+            });
+        });
+    } catch (err) {
+        console.error("Unexpected error:", err.message);
+        return res.status(500).json({
+            error: "An error occurred",
+            details: err.message,
+        });
+    }
+};
+```
+
+---
+
+### Penjelasan Poin-Poin Penting:
+1. **Mengambil Data dari `req.body`**:
+   ```javascript
+   const { user_id, name, description } = req.body;
+   ```
+   - Data seperti `user_id`, `name`, dan `description` diambil dari body permintaan HTTP.
+   - `description` opsional, sehingga jika tidak ada, nilai default-nya adalah `null`.
+
+2. **Validasi Input**:
+   ```javascript
+   if (!user_id || !name) {
+       return res.status(400).json({
+           error: "Missing required fields",
+           message: "user_id and name are required"
+       });
+   }
+   ```
+   - Mengecek apakah `user_id` dan `name` disediakan.
+   - Jika salah satu tidak ada, akan mengembalikan respon **400 Bad Request** dengan pesan error.
+
+3. **Query SQL untuk Menambahkan Data**:
+   ```javascript
+   const query = `
+   INSERT INTO Boards (user_id, name, description)
+   VALUES (?, ?, ?)
+   `;
+   const values = [user_id, name, description || null];
+   ```
+   - Menyusun query SQL menggunakan parameterized query (`?`) untuk mencegah serangan SQL Injection.
+   - Nilai `description` menggunakan operator `||` untuk memastikan nilai `null` jika tidak diisi.
+
+4. **Eksekusi Query ke Database**:
+   ```javascript
+   db.query(query, values, (err, result) => {
+       if (err) {
+           console.error("Error inserting board:", err.message);
+           return res.status(500).json({
+               error: "Failed to create board",
+               details: err.message,
+           });
+       }
+   ```
+   - Fungsi `db.query` digunakan untuk menjalankan query SQL ke database.
+   - Jika terjadi error, log akan dicetak, dan respon **500 Internal Server Error** dikembalikan.
+
+5. **Respon Berhasil**:
+   ```javascript
+   return res.status(201).json({
+       message: "Board created successfully",
+       board: {
+           id: result.insertId,
+           user_id,
+           name,
+           description: description || null,
+           created_at: new Date().toISOString(),
+       },
+   });
+   ```
+   - Jika berhasil, akan mengembalikan respon **201 Created**.
+   - Data board yang baru ditambahkan (termasuk ID-nya dari `result.insertId`) dikirimkan dalam format JSON.
+
+---
+
+
+### 1.  `exports.getBoards`**
+```javascript
+exports.getBoards = async (req, res) => {
+    try {
+        const query = "SELECT * FROM Boards";
+        db.query(query, (err, results) => {
+            if (err) {
+                console.error("Error fetching boards:", err.message);
+                return res.status(500).json({
+                    error: "Failed to fetch boards",
+                    details: err.message,
+                });
+            }
+
+            return res.status(200).json({
+                boards: results,
+            });
+        });
+    } catch (err) {
+        console.error("Unexpected error:", err.message);
+        return res.status(500).json({
+            error: "An error occurred",
+            details: err.message,
+        });
+    }
+}
+```
+
+#### Penjelasan Poin-Poin:
+1. **Query SQL untuk Mengambil Semua Boards**:
+   ```javascript
+   const query = "SELECT * FROM Boards";
+   ```
+   - Mengambil semua data dari tabel `Boards`.
+
+2. **Eksekusi Query**:
+   ```javascript
+   db.query(query, (err, results) => {
+   ```
+   - Jika ada error saat mengambil data, maka akan dikembalikan respon **500 Internal Server Error**.
+
+3. **Respon Berhasil**:
+   ```javascript
+   return res.status(200).json({
+       boards: results,
+   });
+   ```
+   - Jika berhasil, semua data boards dikembalikan dalam format JSON dengan respon **200 OK**.
+
+---
+
+### 2. `exports.updateBoard`**
+```javascript
+exports.updateBoard = async (req, res) => {
+    const { board_id } = req.params;
+    const { name, description } = req.body;
+
+    if (!name) {
+        return res.status(400).json({
+            error: "Missing required fields",
+            message: "name is required"
+        });
+    }
+
+    try {
+        const query = `
+        UPDATE Boards
+        SET name = ?, description = ?
+        WHERE id = ?
+        `;
+        const values = [name, description || null, board_id];
+
+        db.query(query, values, (err, result) => {
+            if (err) {      
+                console.error("Error updating board:", err.message);
+                return res.status(500).json({
+                    error: "Failed to update board",
+                    details: err.message,
+                });
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    error: "Board not found",
+                });
+            }
+
+            return res.status(200).json({
+                message: "Board updated successfully",
+                board: {
+                    id: board_id,
+                    name,
+                    description: description || null,
+                    updated_at: new Date().toISOString(),
+                },
+            });
+        });
+    } catch (err) {
+        console.error("Unexpected error:", err.message);
+        return res.status(500).json({
+            error: "An error occurred",
+            details: err.message,
+        });
+    }
+};
+```
+
+#### Penjelasan Poin-Poin:
+1. **Validasi Input**:
+   - Mengecek apakah `name` disediakan. Jika tidak, akan dikembalikan respon **400 Bad Request**.
+
+2. **Query SQL untuk Update**:
+   ```javascript
+   const query = `
+   UPDATE Boards
+   SET name = ?, description = ?
+   WHERE id = ?
+   `;
+   ```
+   - Query untuk mengupdate data board berdasarkan `board_id`.
+
+3. **Respon jika Data Tidak Ditemukan**:
+   ```javascript
+   if (result.affectedRows === 0) {
+       return res.status(404).json({
+           error: "Board not found",
+       });
+   }
+   ```
+   - Jika `affectedRows` bernilai 0, berarti `board_id` tidak ditemukan.
+
+4. **Respon Berhasil**:
+   ```javascript
+   return res.status(200).json({
+       message: "Board updated successfully",
+       board: {
+           id: board_id,
+           name,
+           description: description || null,
+           updated_at: new Date().toISOString(),
+       },
+   });
+   ```
+
+---
+
+### 3. `exports.deleteBoard`**
+```javascript
+exports.deleteBoard = async (req, res) => {
+    const { board_id } = req.params;
+
+    try {
+        const query = "DELETE FROM Boards WHERE id = ?";
+        db.query(query, [board_id], (err, result) => {
+            if (err) {
+                console.error("Error deleting board:", err.message);
+                return res.status(500).json({
+                    error: "Failed to delete board",
+                    details: err.message,
+                });
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    error: "Board not found",
+                });
+            }
+
+            return res.status(200).json({
+                message: "Board deleted successfully",
+            });
+        });
+    } catch (err) {
+        console.error("Unexpected error:", err.message);
+        return res.status(500).json({
+            error: "An error occurred",
+            details: err.message,
+        });
+    }
+};
+```
+
+#### Penjelasan Poin-Poin:
+1. **Query SQL untuk Menghapus Data**:
+   ```javascript
+   const query = "DELETE FROM Boards WHERE id = ?";
+   ```
+   - Menghapus data berdasarkan `board_id`.
+
+2. **Respon jika Data Tidak Ditemukan**:
+   ```javascript
+   if (result.affectedRows === 0) {
+       return res.status(404).json({
+           error: "Board not found",
+       });
+   }
+   ```
+
+3. **Respon Berhasil**:
+   ```javascript
+   return res.status(200).json({
+       message: "Board deleted successfully",
+   });
+   ```
+
+---
+
+### 4. `exports.getBoardById`**
+```javascript
+exports.getBoardById = async (req, res) => {
+    const { board_id } = req.params;
+
+    try {
+        const query = "SELECT * FROM Boards WHERE id = ?";
+        db.query(query, [board_id], (err, results) => {
+            if (err) {
+                console.error("Error fetching board:", err.message);
+                return res.status(500).json({
+                    error: "Failed to fetch board",
+                    details: err.message,
+                });
+            }
+
+            if (results.length === 0) {
+                return res.status(404).json({
+                    error: "Board not found",
+                });
+            }
+
+            const board = results[0];
+
+            return res.status(200).json({
+                board,
+            });
+        });
+    } catch (err) {
+        console.error("Unexpected error:", err.message);
+        return res.status(500).json({
+            error: "An error occurred",
+            details: err.message,
+        });
+    }
+}
+```
+
+#### Penjelasan Poin-Poin:
+1. **Query SQL untuk Mengambil Data berdasarkan ID**:
+   ```javascript
+   const query = "SELECT * FROM Boards WHERE id = ?";
+   ```
+   - Mengambil data board berdasarkan `board_id`.
+
+2. **Respon jika Data Tidak Ditemukan**:
+   ```javascript
+   if (results.length === 0) {
+       return res.status(404).json({
+           error: "Board not found",
+       });
+   }
+   ```
+
+3. **Respon Berhasil**:
+   ```javascript
+   return res.status(200).json({
+       board,
+   });
+   ```
+   - Jika ditemukan, data board dikembalikan dalam format JSON.
+
+---
+
+
+**commentsControl**  
+
+---
+
+### 1. **`createComment`**
+Fungsi ini digunakan untuk membuat komentar baru pada sebuah pin.
+
+```javascript
+exports.createComment = async (req, res) => {
+  const { pin_id, user_id, comment_text } = req.body;
+
+  // Validasi input
+  if (!pin_id || !user_id || !comment_text) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
+
+  try {
+    // Periksa apakah user_id ada di tabel users sebelum menambahkan komentar
+    const checkUserQuery = "SELECT id FROM users WHERE id = ?";
+    db.query(checkUserQuery, [user_id], (err, results) => {
+      if (err) {
+        console.error("Error checking user existence:", err.message);
+        return res.status(500).json({ error: "Database error", details: err.message });
+      }
+
+      if (results.length === 0) {
+        return res.status(400).json({ error: "Invalid user_id, user does not exist" });
+      }
+
+      // Jika user ditemukan, lanjutkan dengan memasukkan komentar
+      const insertCommentQuery =
+        "INSERT INTO Comments (pin_id, user_id, comment_text) VALUES (?, ?, ?)";
+      const values = [pin_id, user_id, comment_text];
+
+      db.query(insertCommentQuery, values, (err, result) => {
+        if (err) {
+          console.error("Error creating comment:", err.message);
+          return res.status(500).json({
+            error: "Failed to create comment",
+            details: err.message,
+          });
+        }
+
+        return res.status(201).json({
+          message: "Comment created successfully",
+          comment: {
+            id: result.insertId,
+            pin_id,
+            user_id,
+            comment_text,
+            created_at: new Date(),
+          },
+        });
+      });
+    });
+  } catch (err) {
+    console.error("Unexpected error:", err.message);
+    res.status(500).json({ error: "An error occurred", details: err.message });
+  }
+};
+```
+
+**Penjelasan**:
+- **Input**: `pin_id`, `user_id`, `comment_text`.
+- Fungsi ini memvalidasi input. Jika salah satu field kosong, respon error 400 akan dikirim.
+- Fungsi mengecek apakah `user_id` valid dengan query ke tabel `users`.
+- Jika valid, fungsi menambahkan komentar baru ke tabel `Comments` menggunakan query SQL `INSERT INTO`.
+- Mengembalikan detail komentar yang berhasil dibuat.
+
+---
+
+### 2. **`getCommentsByPinId`**
+Fungsi ini digunakan untuk mendapatkan daftar komentar berdasarkan `pin_id`.
+
+```javascript
+exports.getCommentsByPinId = async (req, res) => {
+  const { pin_id } = req.params;
+
+  try {
+    const query = "SELECT * FROM Comments WHERE pin_id = ?";
+    db.query(query, [pin_id], (err, results) => {
+      if (err) {
+        console.error("Error fetching comments:", err.message);
+        return res.status(500).json({ error: "Failed to fetch comments", details: err.message });
+      }
+
+      return res.status(200).json({ comments: results });
+    });
+  } catch (err) {
+    console.error("Unexpected error:", err.message);
+    return res.status(500).json({ error: "An error occurred", details: err.message });
+  }
+};
+```
+
+**Penjelasan**:
+- **Input**: `pin_id` dari parameter URL.
+- Fungsi menjalankan query untuk mengambil semua komentar pada tabel `Comments` berdasarkan `pin_id`.
+- **Output**: JSON berisi array dari komentar terkait `pin_id`.
+
+---
+
+### 3. **`deleteComment`**
+Fungsi ini digunakan untuk menghapus komentar berdasarkan `comment_id`.
+
+```javascript
+exports.deleteComment = async (req, res) => {
+  const { comment_id } = req.params;
+
+  try {
+    const query = "DELETE FROM Comments WHERE id = ?";
+    db.query(query, [comment_id], (err, result) => {
+      if (err) {
+        console.error("Error deleting comment:", err.message);
+        return res.status(500).json({ error: "Failed to delete comment", details: err.message });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Comment not found" });
+      }
+
+      return res.status(200).json({ message: "Comment deleted successfully" });
+    });
+  } catch (err) {
+    console.error("Unexpected error:", err.message);
+    return res.status(500).json({ error: "An error occurred", details: err.message });
+  }
+};
+```
+
+**Penjelasan**:
+- **Input**: `comment_id` dari parameter URL.
+- Fungsi menjalankan query SQL `DELETE` untuk menghapus komentar dari tabel `Comments`.
+- Jika `comment_id` tidak ditemukan, respon error 404 akan dikembalikan.
+- Jika berhasil, respon sukses dengan pesan dikirim.
+
+---
+
+### 4. **`updateComment`**
+Fungsi ini digunakan untuk memperbarui isi komentar berdasarkan `comment_id`.
+
+```javascript
+exports.updateComment = async (req, res) => {
+  const { comment_id } = req.params;
+  const { comment_text } = req.body;
+
+  try {
+    const query = "UPDATE Comments SET comment_text = ? WHERE id = ?";
+    db.query(query, [comment_text, comment_id], (err, result) => {
+      if (err) {
+        console.error("Error updating comment:", err.message);
+        return res.status(500).json({ error: "Failed to update comment", details: err.message });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Comment not found" });
+      }
+
+      return res.status(200).json({ message: "Comment updated successfully" });
+    });
+  } catch (err) {
+    console.error("Unexpected error:", err.message);
+    return res.status(500).json({ error: "An error occurred", details: err.message });
+  }
+};
+```
+
+**Penjelasan**:
+- **Input**: 
+  - `comment_id` dari parameter URL.
+  - `comment_text` dari body request.
+- Fungsi menjalankan query SQL `UPDATE` untuk memperbarui teks komentar.
+- Jika `comment_id` tidak ditemukan, respon error 404 akan dikembalikan.
+- Jika berhasil, respon sukses dikirim.
+
+---
+
+Semua fungsi ini memiliki struktur yang serupa:
+1. Validasi input terlebih dahulu.
+2. Menjalankan query SQL sesuai kebutuhan (SELECT, INSERT, UPDATE, DELETE).
+3. Menangani kemungkinan error dari database.
+4. Memberikan respon yang sesuai kepada client. 
 
 
 
